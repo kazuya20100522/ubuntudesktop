@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # ===== XFCE 専用 HOME =====
+# ★ これを削除（PulseAudio が壊れる）
+# export PULSE_RUNTIME_PATH=/run/user/1000/pulse
+# export PULSE_STATE_PATH=/home/codespace/.config/pulse
+
 export HOME=/home/codespace/.xfce
 mkdir -p $HOME
 mkdir -p $HOME/.vnc
@@ -50,6 +54,17 @@ cat > $HOME/.vnc/xstartup <<'EOF'
 export LANG=ja_JP.UTF-8
 export LC_ALL=ja_JP.UTF-8
 export LANGUAGE=ja_JP:ja
+
+# ===== Audio (PulseAudio + Virtual Sink) =====
+pulseaudio --kill 2>/dev/null || true
+pulseaudio --start --exit-idle-time=-1
+
+# 仮想シンク作成（存在してもエラーにしない）
+pactl load-module module-null-sink sink_name=virtual_sink sink_properties=device.description=VirtualSink 2>/dev/null || true
+
+# デフォルト出力を仮想シンクに
+pactl set-default-sink virtual_sink 2>/dev/null || true
+
 exec dbus-launch --exit-with-session startxfce4
 EOF
 chmod +x $HOME/.vnc/xstartup

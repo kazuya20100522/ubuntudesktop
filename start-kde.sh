@@ -1,9 +1,23 @@
 #!/bin/bash
 
+# ===== Audio (PulseAudio + Virtual Sink) =====
+pulseaudio --kill 2>/dev/null || true
+pulseaudio --start --exit-idle-time=-1
+
+# 仮想シンク作成（存在してもエラーにしない）
+pactl load-module module-null-sink sink_name=virtual_sink sink_properties=device.description=VirtualSink 2>/dev/null || true
+
+# デフォルト出力を仮想シンクに
+pactl set-default-sink virtual_sink 2>/dev/null || true
+
 # ===== KDE 専用 HOME =====
 export HOME=/home/codespace/.kde
 mkdir -p $HOME
 mkdir -p $HOME/.vnc
+
+# ===== PulseAudio は KDE で起動しない =====
+unset PULSE_RUNTIME_PATH
+unset PULSE_STATE_PATH
 
 # ===== 旧セッション完全終了 =====
 echo "[*] Killing old VNC / Desktop sessions..."
