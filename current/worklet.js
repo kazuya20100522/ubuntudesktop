@@ -3,15 +3,18 @@ class PCMPlayer extends AudioWorkletProcessor {
     super();
     this.buffer = new Float32Array(0);
 
-    // 少し余裕を持たせる（約 250〜300ms）
-    this.maxBuffer = 20000;
+    // 約 200ms 分くらい（48000 * 0.2）
+    this.maxBuffer = 9600;
 
     this.port.onmessage = (event) => {
+      // ★ 受け取るのは s16le
+      const int16 = new Int16Array(event.data);
+      const float32 = new Float32Array(int16.length);
 
-      // ★ ここだけ修正（1行に置き換え）
-      const float32 = new Float32Array(event.data);
+      for (let i = 0; i < int16.length; i++) {
+        float32[i] = int16[i] / 32768;
+      }
 
-      // バッファ上限を超えないようにしつつ、なるべく残す
       const totalLen = this.buffer.length + float32.length;
       if (totalLen <= this.maxBuffer) {
         const newBuffer = new Float32Array(totalLen);
@@ -34,8 +37,8 @@ class PCMPlayer extends AudioWorkletProcessor {
     const output = outputs[0][0];
 
     if (this.buffer.length >= output.length) {
-      output.set(this.buffer.slice(0, output.length));
-      this.buffer = this.buffer.slice(output.length);
+      output.set(this.buffer.subarray(0, output.length));
+      this.buffer = this.buffer.subarray(output.length);
     } else {
       output.fill(0);
     }

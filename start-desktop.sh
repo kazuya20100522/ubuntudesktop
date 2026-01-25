@@ -5,17 +5,19 @@ pkill websockify 2>/dev/null
 
 set -e
 
-echo "[*] Installing KDE Plasma (Minimal)..."
+echo "[*] Installing packages..."
 
 # ==== Update =======================================================
 sudo apt-get update -y
+sudo apt-get dist-upgrade -y --allow-downgrades
 
-# ==== Install packages (KDE Minimal) ==============================
-sudo apt-get install -y --no-install-recommends \
-  kde-plasma-desktop \
-  tigervnc-standalone-server tigervnc-common tigervnc-tools \
+# ==== Install packages ============================================
+sudo apt-get install -y \
+  xfce4 xfce4-goodies \
+  tigervnc-standalone-server tigervnc-common \
   novnc websockify \
   dbus-x11 x11-xserver-utils \
+  xfce4-terminal xfce4-panel \
   pulseaudio \
   ibus ibus-mozc \
   language-pack-ja language-pack-gnome-ja \
@@ -40,6 +42,7 @@ cat > ~/.config/autostart/ibus.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Exec=ibus-daemon -drx
+X-GNOME-Autostart-enabled=true
 Name=IBus
 EOF
 
@@ -47,8 +50,7 @@ EOF
 VNC_DIR="$HOME/.vnc"
 mkdir -p "$VNC_DIR"
 
-# パスワードを自動生成（固定: vncpass）
-echo "vncpass" | vncpasswd -f > "$VNC_DIR/passwd"
+echo "vncpass" | vncpasswd -f > "$VNC_DIR/passwd" || true
 chmod 600 "$VNC_DIR/passwd"
 
 cat > "$VNC_DIR/xstartup" <<'EOF'
@@ -61,7 +63,8 @@ export GTK_IM_MODULE=ibus
 export QT_IM_MODULE=ibus
 export XMODIFIERS=@im=ibus
 
-exec dbus-launch --exit-with-session startplasma-x11
+xrdb $HOME/.Xresources
+exec dbus-launch --exit-with-session startxfce4
 EOF
 chmod +x "$VNC_DIR/xstartup"
 
@@ -77,16 +80,15 @@ while ss -tlnp | grep -q ":6080"; do
 done
 
 # ==== Update noVNC to latest ======================================
-if [ ! -d "/usr/share/novnc/.git" ]; then
-    sudo rm -rf /usr/share/novnc
-    sudo git clone --depth 1 https://github.com/novnc/noVNC /usr/share/novnc
-fi
+sudo rm -rf /usr/share/novnc
+sudo git clone https://github.com/novnc/noVNC /usr/share/novnc
 
 # ==== Start VNC (TigerVNC) ========================================
-echo "[*] Starting TigerVNC for KDE (:1)..."
-vncserver :1 -geometry 1280x720 -depth 24 -localhost no
+echo "[*] Starting TigerVNC (:1)..."
+vncserver :1 -geometry 1366x768 -depth 24 -localhost no
 
-sleep 3
+# ==== Delay to ensure VNC is ready ================================
+sleep 2
 
 # ==== Start noVNC (websockify) ====================================
 echo "[*] Starting noVNC (6080)..."
@@ -101,6 +103,7 @@ pulseaudio --start --exit-idle-time=-1
 # ==== Done =========================================================
 echo "=============================================================="
 echo " ✔ noVNC  : http://localhost:6080/"
-echo " ✔ Password: vncpass"
-echo " ✔ Desktop: KDE Plasma (Minimal / Japanese)"
+echo " ✔ Desktop: XFCE4 (Japanese / IBus / Mozc)"
+echo " ✔ TigerVNC + 最新 noVNC"
+echo " ✔ 6080 ポート詰まり対策済み（安定版）"
 echo "=============================================================="

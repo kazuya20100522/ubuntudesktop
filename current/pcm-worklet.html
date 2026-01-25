@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+</head>
 <body>
 <h2>PCM streaming (AudioWorklet 最速版)</h2>
 <button id="start">再生開始</button>
-<p>遅延は 0.8〜1.3 秒を目指します。</p>
+<p>遅延は 0.3〜0.8 秒くらいを狙う設定。</p>
 
 <script>
 let audioCtx;
@@ -11,7 +14,7 @@ let ws;
 
 document.getElementById("start").onclick = async () => {
   audioCtx = new AudioContext({
-    sampleRate: 44100,
+    sampleRate: 48000,          // ★ ffmpeg と合わせる
     latencyHint: "interactive"
   });
 
