@@ -3,17 +3,12 @@ class PCMPlayer extends AudioWorkletProcessor {
     super();
     this.buffer = new Float32Array(0);
 
-    // 約 200ms 分くらい（48000 * 0.2）
-    this.maxBuffer = 9600;
+    // ★ 300ms 分のバッファ（安定性UP）
+    this.maxBuffer = 14400;
 
     this.port.onmessage = (event) => {
-      // ★ 受け取るのは s16le
-      const int16 = new Int16Array(event.data);
-      const float32 = new Float32Array(int16.length);
-
-      for (let i = 0; i < int16.length; i++) {
-        float32[i] = int16[i] / 32768;
-      }
+      // ★ ffmpeg が f32le を出すのでそのまま Float32 として受ける
+      const float32 = new Float32Array(event.data);
 
       const totalLen = this.buffer.length + float32.length;
       if (totalLen <= this.maxBuffer) {

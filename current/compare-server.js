@@ -10,38 +10,17 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 // ---- HTTP サーバ ----
 const server = http.createServer((req, res) => {
 
-  // ★ /pcm を復活
-  if (req.url === "/pcm") {
-    const filePath = path.join(__dirname, "pcm.html");
-    const html = fs.readFileSync(filePath);
-    res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(html);
-    return;
-  }
+  const serve = (file, type) => {
+    const filePath = path.join(__dirname, file);
+    const data = fs.readFileSync(filePath);
+    res.writeHead(200, { "Content-Type": type });
+    res.end(data);
+  };
 
-  if (req.url === "/pcm-worklet") {
-    const filePath = path.join(__dirname, "pcm-worklet.html");
-    const html = fs.readFileSync(filePath);
-    res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(html);
-    return;
-  }
-
-  if (req.url === "/webrtc") {
-    const filePath = path.join(__dirname, "webrtc.html");
-    const html = fs.readFileSync(filePath);
-    res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(html);
-    return;
-  }
-
-  if (req.url === "/worklet.js") {
-    const filePath = path.join(__dirname, "worklet.js");
-    const js = fs.readFileSync(filePath);
-    res.writeHead(200, { "Content-Type": "application/javascript" });
-    res.end(js);
-    return;
-  }
+  if (req.url === "/pcm") return serve("pcm.html", "text/html");
+  if (req.url === "/pcm-worklet") return serve("pcm-worklet.html", "text/html");
+  if (req.url === "/webrtc") return serve("webrtc.html", "text/html");
+  if (req.url === "/worklet.js") return serve("worklet.js", "application/javascript");
 
   res.writeHead(404);
   res.end("Not found");
@@ -73,22 +52,22 @@ server.on("upgrade", (req, socket, head) => {
   }
 });
 
-// ---- ffmpeg → PCM（高音質・低遅延設定） ----
+// ---- ffmpeg → PCM（高音質 Float32） ----
 const ffmpeg = spawn("ffmpeg", [
   "-flags", "low_delay",
   "-f", "pulse",
   "-i", "virtual_sink.monitor",
   "-ac", "1",
   "-ar", "48000",
-  "-f", "s16le",
+  "-f", "f32le",        // ★ 32bit float
   "-flush_packets", "1",
   "-max_delay", "0",
   "pipe:1"
 ]);
 
-// ---- WebSocket 送信（小さめチャンク） ----
+// ---- WebSocket 送信（大きめチャンクで安定） ----
 ffmpeg.stdout.on("data", (chunk) => {
-  const size = 4096;
+  const size = 16384; // ★ 高音質向け
   for (let i = 0; i < chunk.length; i += size) {
     const slice = chunk.subarray(i, i + size);
     for (const ws of pcmClients) {
