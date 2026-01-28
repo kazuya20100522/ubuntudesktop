@@ -3,11 +3,11 @@ class PCMPlayer extends AudioWorkletProcessor {
     super();
     this.buffer = new Float32Array(0);
 
-    // ★ 300ms 分のバッファ（安定性UP）
-    this.maxBuffer = 14400;
+    // 300ms × 2ch
+    this.maxBuffer = 48000 * 0.3 * 2;
+    this.channels = 2;
 
     this.port.onmessage = (event) => {
-      // ★ ffmpeg が f32le を出すのでそのまま Float32 として受ける
       const float32 = new Float32Array(event.data);
 
       const totalLen = this.buffer.length + float32.length;
@@ -29,13 +29,20 @@ class PCMPlayer extends AudioWorkletProcessor {
   }
 
   process(inputs, outputs) {
-    const output = outputs[0][0];
+    const outputL = outputs[0][0];
+    const outputR = outputs[0][1];
 
-    if (this.buffer.length >= output.length) {
-      output.set(this.buffer.subarray(0, output.length));
-      this.buffer = this.buffer.subarray(output.length);
+    const frameSize = outputL.length;
+
+    if (this.buffer.length >= frameSize * 2) {
+      for (let i = 0; i < frameSize; i++) {
+        outputL[i] = this.buffer[i * 2];
+        outputR[i] = this.buffer[i * 2 + 1];
+      }
+      this.buffer = this.buffer.subarray(frameSize * 2);
     } else {
-      output.fill(0);
+      outputL.fill(0);
+      outputR.fill(0);
     }
 
     return true;
