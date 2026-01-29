@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
 </head>
 <body>
-<h2>PCM streaming (AudioWorklet 最速版)</h2>
+<h2>PCM streaming (AudioWorklet 48kHz ステレオ)</h2>
 <button id="start">再生開始</button>
-<p>遅延は 0.3〜0.8 秒くらいを狙う設定。</p>
+<p>48kHz / Float32 / ステレオ / 遅延 ~0.2〜0.5秒</p>
 
 <script>
 let audioCtx;
@@ -20,7 +20,6 @@ document.getElementById("start").onclick = async () => {
 
   await audioCtx.audioWorklet.addModule("worklet.js");
 
-  // ★★★ ステレオ対応 AudioWorkletNode ★★★
   const workletNode = new AudioWorkletNode(audioCtx, "pcm-player", {
     outputChannelCount: [2],
     channelCount: 2,

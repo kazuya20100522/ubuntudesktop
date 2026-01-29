@@ -1,11 +1,11 @@
 class PCMPlayer extends AudioWorkletProcessor {
   constructor() {
     super();
-    this.buffer = new Float32Array(0);
-
-    // 300ms × 2ch
-    this.maxBuffer = 48000 * 0.3 * 2;
     this.channels = 2;
+
+    // 48kHz × 0.15秒 × 2ch = 14400 サンプル
+    this.maxBuffer = 48000 * 0.15 * this.channels;
+    this.buffer = new Float32Array(0);
 
     this.port.onmessage = (event) => {
       const float32 = new Float32Array(event.data);
@@ -31,15 +31,15 @@ class PCMPlayer extends AudioWorkletProcessor {
   process(inputs, outputs) {
     const outputL = outputs[0][0];
     const outputR = outputs[0][1];
-
     const frameSize = outputL.length;
 
-    if (this.buffer.length >= frameSize * 2) {
+    if (this.buffer.length >= frameSize * this.channels) {
       for (let i = 0; i < frameSize; i++) {
-        outputL[i] = this.buffer[i * 2];
-        outputR[i] = this.buffer[i * 2 + 1];
+        const base = i * this.channels;
+        outputL[i] = this.buffer[base];
+        outputR[i] = this.buffer[base + 1];
       }
-      this.buffer = this.buffer.subarray(frameSize * 2);
+      this.buffer = this.buffer.subarray(frameSize * this.channels);
     } else {
       outputL.fill(0);
       outputR.fill(0);

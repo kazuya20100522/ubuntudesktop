@@ -9,7 +9,6 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 // ---- HTTP サーバ ----
 const server = http.createServer((req, res) => {
-
   const serve = (file, type) => {
     const filePath = path.join(__dirname, file);
     const data = fs.readFileSync(filePath);
@@ -17,9 +16,7 @@ const server = http.createServer((req, res) => {
     res.end(data);
   };
 
-  if (req.url === "/pcm") return serve("pcm.html", "text/html");
   if (req.url === "/pcm-worklet") return serve("pcm-worklet.html", "text/html");
-  if (req.url === "/webrtc") return serve("webrtc.html", "text/html");
   if (req.url === "/worklet.js") return serve("worklet.js", "application/javascript");
 
   res.writeHead(404);
@@ -52,22 +49,22 @@ server.on("upgrade", (req, socket, head) => {
   }
 });
 
-// ---- ffmpeg → PCM（高音質 Float32） ----
+// ---- ffmpeg → PCM（48kHz / ステレオ Float32） ----
 const ffmpeg = spawn("ffmpeg", [
   "-flags", "low_delay",
   "-f", "pulse",
   "-i", "virtual_sink.monitor",
-  "-ac", "2",
-  "-ar", "48000",
-  "-f", "f32le",        // ★ 32bit float
+  "-ac", "2",          // ステレオ
+  "-ar", "48000",      // 48kHz
+  "-f", "f32le",
+  "-af", "anull",      // フィルタ完全オフ
   "-flush_packets", "1",
   "-max_delay", "0",
   "pipe:1"
 ]);
 
-// ---- WebSocket 送信（大きめチャンクで安定） ----
 ffmpeg.stdout.on("data", (chunk) => {
-  const size = 16384; // ★ 高音質向け
+  const size = 32768; // ★ チャンク拡大（音の連続性UP）
   for (let i = 0; i < chunk.length; i += size) {
     const slice = chunk.subarray(i, i + size);
     for (const ws of pcmClients) {
@@ -83,8 +80,5 @@ ffmpeg.stderr.on("data", (data) => {
 });
 
 server.listen(9000, () => {
-  console.log("Compare server running on port 9000");
-  console.log("PCM page        : /pcm");
   console.log("PCM Worklet page: /pcm-worklet");
-  console.log("WebRTC page     : /webrtc");
 });
